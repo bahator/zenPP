@@ -4,6 +4,11 @@
   },
   "initial": {
     "compression": {},
+    "loopback-context#per-request": {
+      "params": {
+        "enableHttpContext": true
+      }
+    },
     "cors": {
       "params": {
         "origin": true,
