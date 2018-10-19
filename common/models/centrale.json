@@ -21,13 +21,38 @@
     }
   },
   "validations": [],
-  "relations": {},
+  "relations": {
+    "user": {
+      "type": "belongsTo",
+      "model": "User",
+      "foreignKey": "",
+      "options": {
+        "nestRemoting": true,
+        "disableInclude": false
+      }
+    },
+    "historiques": {
+      "type": "hasMany",
+      "model": "historique",
+      "foreignKey": "",
+      "options": {
+        "nestRemoting": true
+      },
+      "through": "historique"
+    }
+  },
   "acls": [
     {
       "accessType": "*",
       "principalType": "ROLE",
       "principalId": "$unauthenticated",
       "permission": "DENY"
+    },
+    {
+      "accessType": "*",
+      "principalType": "ROLE",
+      "principalId": "$owner",
+      "permission": "ALLOW"
     }
   ],
   "methods": {}
