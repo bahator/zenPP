@@ -10,26 +10,37 @@
       "type": "date",
       "required": true
     },
-    "energie_transferee": {
+    "nature": {
+      "type": "String",
+      "required": false
+    },
+    "capactie": {
+      "type": "String",
+      "required": false
+    },
+    "energie": {
       "type": "number",
-      "required": true,
-      "default": 0
+      "required": false
     }
   },
   "validations": [],
-  "relations": {},
+  "relations": {
+    "centrale": {
+      "type": "belongsTo",
+      "model": "centrale",
+      "foreignKey": "",
+      "options": {
+        "nestRemoting": true,
+        "disableInclude": false
+      }
+    }
+  },
   "acls": [
     {
       "accessType": "*",
       "principalType": "ROLE",
       "principalId": "$unauthenticated",
       "permission": "DENY"
-    },
-    {
-      "accessType": "*",
-      "principalType": "ROLE",
-      "principalId": "$owner",
-      "permission": "ALLOW"
     },
     {
       "accessType": "*",
