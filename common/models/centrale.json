@@ -39,6 +39,15 @@
         "nestRemoting": true
       },
       "through": "historique"
+    },
+    "historiqueDeMouvements": {
+      "type": "hasMany",
+      "model": "historiqueDeMouvement",
+      "foreignKey": "",
+      "options": {
+        "nestRemoting": true
+      },
+      "through": "historiqueDeMouvement"
     }
   },
   "acls": [

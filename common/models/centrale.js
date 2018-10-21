@@ -43,7 +43,6 @@ module.exports = function (Centrale) {
     Centrale.histoByCentraleId = function (req, id, cb) {
         var userId = req.accessToken.userId;
         Centrale.findById(id, function (err, reportModelInstance) {
-            console.log(reportModelInstance);
             if(reportModelInstance == null || req.accessToken.userId.toString()!==reportModelInstance.toObject().userId.toString()){
                 err = new Error();
                 err.message = 'La valeur ne correspond pas à un objet.';
@@ -57,54 +56,60 @@ module.exports = function (Centrale) {
         });
     };
 
-    Centrale.recharge = function (req, id, energie, cb) {
-        Centrale.findById(id, function (err, reportModelInstance) {
-            if (reportModelInstance == null || req.accessToken.userId.toString()!==reportModelInstance.toObject().userId.toString()) {
+    Centrale.recharge = function (req, id, energie, callback) {
+        Centrale.find({where: {"id":id, "userId": req.accessToken.userId.toString()}, limit: 1}, function (err, centraleTrouvee) {
+            if (centraleTrouvee.length==0) {
                 err = new Error();
                 err.message = 'La valeur ne correspond pas à un objet.';
                 err.code = 'NO_MATCHING_VALUE';
-                cb(err);
+                callback(err);
             }
             else {
-                let energie_post_recharge = parseInt(energie, 10) + parseInt(reportModelInstance.toObject().energie, 10);
-                if (parseInt(reportModelInstance.toObject().capacite, 10) < energie_post_recharge) {
+                let energie_post_recharge = parseInt(energie, 10) + parseInt(centraleTrouvee[0].toObject().energie, 10);
+                if (parseInt(centraleTrouvee[0].toObject().capacite, 10) < energie_post_recharge) {
                     err = new Error();
                     err.message = 'Capacitée de la centrale dépassée';
                     err.code = 'EXCEEDED_CAPACITY';
-                    cb(err);
+                    callback(err);
                 }
                 else {
-                    reportModelInstance.updateAttribute('energie', energie_post_recharge, function (err, reportModelInstance) {
-                        cb(null, reportModelInstance);
+                    centraleTrouvee[0].updateAttribute('energie', energie_post_recharge, function (err, centraleUpdated) {
+                        err ? callback(err) : Centrale.app.models.HistoriqueDeMouvement.create({"natureDuMouvement": "recharge", "energie" : energie, "date": new Date(), "centraleid": id}, callback(null, centraleUpdated));
                     });
                 }
             }
         });
     };
 
-    Centrale.consomme = function (id, energie, cb) {
-        Centrale.findById(id, function (err, reportModelInstance) {
-            if (reportModelInstance == null || req.accessToken.userId.toString()!==reportModelInstance.toObject().userId.toString()) {
+    Centrale.consomme = function (req, id, energie, callback) {
+        Centrale.find({where: {"id":id, "userId": req.accessToken.userId.toString()}, limit: 1}, function (err, centraleTrouvee) {
+            if (centraleTrouvee.length==0) {
                 err = new Error();
                 err.message = 'La valeur ne correspond pas à un objet.';
                 err.code = 'NO_MATCHING_VALUE';
-                cb(err);
+                callback(err);
             }
             else {
-                let energie_post_conso = parseInt(reportModelInstance.toObject().energie, 10) - parseInt(energie, 10);
-                if (parseInt(reportModelInstance.toObject().capacite, 10) < energie_post_conso) {
+                let energie_post_conso = parseInt(centraleTrouvee[0].toObject().energie, 10) - parseInt(energie, 10);
+                if (parseInt(centraleTrouvee[0].toObject().capacite, 10) < energie_post_conso) {
                     err = new Error();
                     err.message = 'Pas assez d\'énergie dans la centrale';
                     err.code = 'NOT_ENOUGHT_POWER';
-                    cb(err);
+                    callback(err);
                 }
                 else {
-                    reportModelInstance.updateAttribute('energie', energie_post_conso, function (err, reportModelInstance) {
-                        cb(null, reportModelInstance);
+                    centraleTrouvee[0].updateAttribute('energie', energie_post_conso, function (err, centraleUpdated) {
+                        err ? callback(err) : Centrale.app.models.HistoriqueDeMouvement.create({"natureDuMouvement": "consomme", "energie" : energie, "date": new Date(), "centraleid": id}, callback(null, centraleUpdated));
                     });
                 }
             }
         });
+    };
+
+   Centrale.findA = function (req, callback) {
+       Centrale.find({where: {"userId": req.accessToken.userId.toString()}, limit: 1}, function (err, centralesTrouvees) {
+           callback(err, centralesTrouvees);
+       });
     };
 
     Centrale.observe('before save', function filterProperties(ctx, next) {
@@ -193,8 +198,25 @@ module.exports = function (Centrale) {
                 verb: 'post'
             },
             accepts: [
+                { arg: 'req', type: 'object', http: {source: 'req'} },
                 {arg: 'id', type: 'string'},
                 {arg: 'energie', type: 'number'}
+            ],
+            returns: {
+                arg: 'centrale',
+                type: 'object'
+            }
+        }
+    );
+    Centrale.remoteMethod(
+        'findHistoriquesDeMouvement', {
+            http: {
+                path: '/:id/findHistoriquesDeMouvement',
+                verb: 'get'
+            },
+            accepts: [
+                { arg: 'req', type: 'object', http: {source: 'req'} },
+                {arg: 'id', type: 'string'}
             ],
             returns: {
                 arg: 'centrale',

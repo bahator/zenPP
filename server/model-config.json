@@ -42,5 +42,9 @@
   "historique": {
     "dataSource": "db",
     "public": true
+  },
+  "historiqueDeMouvement": {
+    "dataSource": "db",
+    "public": true
   }
 }
