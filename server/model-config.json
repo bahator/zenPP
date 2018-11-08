@@ -14,7 +14,16 @@
     ]
   },
   "User": {
-    "dataSource": "db"
+    "dataSource": "db",
+    "options": {
+      "remoting": {
+        "sharedMethods": {
+          "*": false,
+          "login": true,
+          "logout": true
+        }
+      }
+    }
   },
   "AccessToken": {
     "dataSource": "db",
@@ -37,10 +46,37 @@
   },
   "centrale": {
     "dataSource": "db",
-    "public": true
+    "public": true,
+    "options": {
+      "remoting": {
+        "sharedMethods": {
+          "*": false,
+          "findSafe": true,
+          "deleteById":true,
+          "create":true,
+          "histoByCentraleId" : true,
+          "recharge" : true,
+          "consomme":true,
+          "updateAll":true
+        }
+      }
+    }
   },
   "historique": {
     "dataSource": "db",
-    "public": true
+    "public": false
+  },
+  "historiqueDeMouvement": {
+    "dataSource": "db",
+    "public": true,
+    "options": {
+      "remoting": {
+        "sharedMethods": {
+          "*": false,
+          "balance": true,
+          "balanceParNatureDeCentrale":true
+        }
+      }
+    }
   }
 }
