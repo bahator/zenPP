@@ -2,57 +2,69 @@
 
 module.exports = function(HistoriqueDeMouvement) {
 
-    //TODO virer les méthodes générées automatiquement
-    HistoriqueDeMouvement.disableRemoteMethodByName('patchOrCreate');
-
     HistoriqueDeMouvement.balance = function (req, callback) {
-        HistoriqueDeMouvement.app.models.Centrale.findA(req, function (err, listeCentrales) {
 
-            var energieProduite=0;
-            var energieConsommee=0;
+        const movementByCentrales  = HistoriqueDeMouvement.app.models.Centrale.findSafe(req,{}).then(centrales => {
+            return HistoriqueDeMouvement.find().then(histos => {
+                return histos.filter(histo => centrales.map(central => central.id.toString()).includes(histo.toObject().centraleid));});
+        });
 
-            listeCentrales.asyncForEach(function (centrale) {
-                HistoriqueDeMouvement.find({},function (err, listeHistoriquesDeMouvement) {
-                    listeHistoriquesDeMouvement.filter(histo => histo.toObject().centraleid==centrale.toObject().id).asyncForEach(function (histo) {
-                        histo.toObject().natureDuMouvement=="recharge" ? energieProduite+=histo.toObject().energie : energieConsommee+=histo.toObject().energie;
-                    });
-                });
+        const energieProduite  = movementByCentrales.filter(mouvement =>
+                mouvement.toObject().natureDuMouvement==="recharge"
+    ).reduce((acc, mouvement) => acc + mouvement.energie, 0);
+
+        const energieConsommee  = movementByCentrales.filter(mouvement =>
+                mouvement.toObject().natureDuMouvement==="consomme"
+            ).reduce((acc, mouvement) => acc + mouvement.energie, 0);
+
+        energieProduite.then(production => {
+            energieConsommee.then(consommationn => {
+                callback(null, {"production":production, "consommation":consommationn});
             });
-            callback(err, {"production":energieProduite,"consommation": energieConsommee});
-        })
+        });
     };
 
-    HistoriqueDeMouvement.balanceparNatureDeCentrale = function (req, callback) {
-        HistoriqueDeMouvement.app.models.Centrale.findA(req, function (err, listeCentrales) {
+    HistoriqueDeMouvement.balanceParCentrale = function (centraleId, callback) {
+        const histos = HistoriqueDeMouvement.find().then(histos => {
+            return histos.filter(histo => centraleId.toString()===histo.toObject().centraleid)});
 
-            var mapBalanceparNature = {};
+        const energieProduite  = histos.filter(mouvement =>
+            mouvement.toObject().natureDuMouvement==="recharge"
+        ).reduce((acc, mouvement) => acc + mouvement.energie, 0);
 
-            listeCentrales.asyncForEach(function (centrale) {
-                HistoriqueDeMouvement.find({}, function (err, listeHistoriquesDeMouvement) {
-                    listeHistoriquesDeMouvement.filter(histo => histo.toObject().centraleid==centrale.toObject().id).asyncForEach(function (histo) {
+        const energieConsommee  = histos.filter(mouvement =>
+            mouvement.toObject().natureDuMouvement==="consomme"
+        ).reduce((acc, mouvement) => acc + mouvement.energie, 0);
 
-                        if (mapBalanceparNature[centrale.toObject().nature] !== undefined) {
-                            mapBalanceparNature[centrale.toObject().nature] = {
-                                "production": 0,
-                                "consommation": 0
-                            };
-                        }
+        energieProduite.then(production => {
+            energieConsommee.then(consommation => {
+            callback(null, {"production":production, "consommation":consommation});
+    });
+    });
 
-                        if (histo.toObject().natureDuMouvement == "recharge") {
-                            mapBalanceparNature[centrale.toObject().nature]["production"] = parseInt(mapBalanceparNature[centrale.toObject().nature]["production"])
-                                + histo.toObject().energie;
-                        }
-                        else {
-                            mapBalanceparNature[centrale.toObject().nature]["consommation"] = parseInt(mapBalanceparNature[centrale.toObject().nature]["consommation"])
-                                + histo.toObject().energie;
-                        }
-                    });
-                });
-            });
-
-            callback(err, jsonMapReturn);
-        })
     };
+
+    HistoriqueDeMouvement.balanceParNatureDeCentrale = function (req, callback) {
+       HistoriqueDeMouvement.app.models.Centrale.findSafe(req,{}).then(centrales => {
+            return Promise.all(centrales.map( centrale => {
+                    return new Promise(function (resolve, reject) {
+                        HistoriqueDeMouvement.balanceParCentrale(centrale.id.toString(), function (err, balances) {
+                            const retour = {};
+                            retour[centrale.nature] = balances;
+                            resolve(retour)
+                        });
+                    })
+                })).then(balanceParNature => {
+                        callback(null, balanceParNature);
+                    });
+        });
+    };
+
+    HistoriqueDeMouvement.afterRemote('*', function(ctx, methodOutput, next)
+    {
+        ctx.result={"data": methodOutput, "options": {}};
+        next();
+    });
 
     HistoriqueDeMouvement.remoteMethod(
         'balance', {
@@ -72,7 +84,7 @@ module.exports = function(HistoriqueDeMouvement) {
     HistoriqueDeMouvement.remoteMethod(
         'balanceParNatureDeCentrale', {
             http: {
-                path: '/balanceparNatureDeCentrale',
+                path: '/balanceParNatureDeCentrale',
                 verb: 'get'
             },
             accepts: [
