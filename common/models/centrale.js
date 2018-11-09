@@ -266,8 +266,6 @@ module.exports = function (Centrale) {
 
     function getUriByMethodName(name){
 
-        console.log(name);
-
         const centrales_list_url = {"url":"http://localhost:3000/api/centrales?access_token={user_token}", "args":{}};
         const centrales_create_url = {"url":"http://localhost:3000/api/centrales?access_token={user_token}",
             "args":
